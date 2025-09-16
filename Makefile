@@ -18,7 +18,8 @@ $(BUILD)/emu: $(EMU_SRCS) $(EMU_HDRS)
 	$(CC) $(CFLAGS) $(EMU_SRCS) -o $@
 
 # Unit tests: one executable per emu/tests/test_*.c, run as part of the build.
-# A test needing emulator modules links them via TEST_DEPS_<name> (none yet).
+# Tests link every emulator module except main.c.
+LIB_SRCS := $(filter-out emu/src/main.c,$(EMU_SRCS))
 UNIT_SRCS := $(wildcard emu/tests/test_*.c)
 UNIT_BINS := $(patsubst emu/tests/%.c,$(BUILD)/unit/%,$(UNIT_SRCS))
 UNIT_HDRS := $(wildcard emu/tests/*.h) $(EMU_HDRS)
@@ -26,9 +27,9 @@ UNIT_HDRS := $(wildcard emu/tests/*.h) $(EMU_HDRS)
 unit: $(UNIT_BINS)
 	@set -e; for t in $(UNIT_BINS); do echo "run $$t"; $$t; done
 
-$(BUILD)/unit/%: emu/tests/%.c $(UNIT_HDRS) $(TEST_DEPS_$*)
+$(BUILD)/unit/%: emu/tests/%.c $(LIB_SRCS) $(UNIT_HDRS)
 	@mkdir -p $(BUILD)/unit
-	$(CC) $(CFLAGS) $< $(TEST_DEPS_$*) -o $@
+	$(CC) $(CFLAGS) $< $(LIB_SRCS) -o $@
 
 riscv-tests:
 	scripts/build_riscv_tests.sh
