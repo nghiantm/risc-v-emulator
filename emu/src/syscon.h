@@ -2,7 +2,7 @@
 #define SYSCON_H
 
 #include "bus.h"
-#include "machine.h"
+#include "exit_request.h"
 
 typedef struct {
     Device       dev;
