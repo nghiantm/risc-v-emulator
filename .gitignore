@@ -5,3 +5,7 @@ build/
 .vscode/
 .idea/
 .DS_Store
+ARCHITECTURE.md
+IMPLEMENTATION_PLAN.md
+TASK_LOG.md
+CURRENT_TASK.md
