@@ -106,7 +106,7 @@ int main(int argc, char **argv)
     m.trace = opts.trace;
 
     uint32_t tohost;
-    if (!elf_load(img, len, &m.bus, &m.entry, err, sizeof err)) {
+    if (!elf_load(img, len, &m.bus, &m.cpu.pc, err, sizeof err)) {
         free(img);
         machine_free(&m);
         return die(err);

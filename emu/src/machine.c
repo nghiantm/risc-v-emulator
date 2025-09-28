@@ -3,6 +3,7 @@
 
 #include "machine.h"
 #include "memory_map.h"
+#include "trace.h"
 
 bool machine_init(Machine *m)
 {
@@ -23,10 +24,37 @@ void machine_free(Machine *m)
     ram_free(&m->main_ram);
 }
 
-/* Stub until Milestone 5 adds the CPU. */
+/* The tohost latch becomes an exit request: 1 means pass, anything else fails with value >> 1. */
+static void latch_tohost(Machine *m)
+{
+    if (!m->bus.tohost_written)
+        return;
+    if (m->bus.tohost_value == 1)
+        exit_request(&m->exit_req, EXIT_PASS, 0, "tohost");
+    else
+        exit_request(&m->exit_req, EXIT_FAIL, m->bus.tohost_value >> 1, "tohost");
+}
+
 RunResult machine_run(Machine *m, uint64_t max_insts)
 {
-    (void)max_insts;
-    m->error = "cpu not implemented";
-    return RUN_ERROR;
+    for (uint64_t n = 0; ; n++) {
+        latch_tohost(m);
+        if (m->exit_req.kind != EXIT_NONE)
+            return m->exit_req.kind == EXIT_PASS ? RUN_PASS : RUN_FAIL;
+        if (n == max_insts)
+            return RUN_TIMEOUT;
+
+        StepInfo info;
+        Trap t = cpu_step(&m->cpu, &m->bus, &info);
+        if (t.raised) {
+            /* Trap delivery arrives with the CSRs in Milestone 7. */
+            snprintf(m->error_buf, sizeof m->error_buf, "unhandled trap cause=0x%x tval=0x%08x pc=0x%08x",
+                     (unsigned)t.cause, (unsigned)t.tval, (unsigned)m->cpu.pc);
+            m->error = m->error_buf;
+            return RUN_ERROR;
+        }
+        if (m->trace)
+            trace_step(stderr, &info);
+        bus_tick(&m->bus);
+    }
 }
