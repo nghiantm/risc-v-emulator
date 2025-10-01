@@ -1,3 +1,4 @@
+#include "alu.h"
 #include "cpu.h"
 #include "decode.h"
 
@@ -151,8 +152,13 @@ Trap cpu_step(Cpu *cpu, Bus *bus, StepInfo *info)
         write = true;
         break;
     case OP_REG:
+        if (funct7 == 0x01) {               /* M extension */
+            result = alu_m(funct3, a, b);
+            write = true;
+            break;
+        }
         if (funct7 != 0x00 && !(funct7 == 0x20 && (funct3 == 0 || funct3 == 5)))
-            return illegal(insn);           /* funct7 0x01 (M extension) arrives in Milestone 6 */
+            return illegal(insn);
         result = alu(funct3, funct7 == 0x20, a, b);
         write = true;
         break;
