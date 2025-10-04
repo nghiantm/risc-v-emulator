@@ -144,9 +144,6 @@ static const uint32_t prog_store_unmapped[] = {
 static const uint32_t prog_ecall[] = {
     0x00000073, /* ecall */
 };
-static const uint32_t prog_mul[] = {
-    0x023100b3, /* mul x1,x2,x3 */
-};
 static const uint32_t prog_csr[] = {
     0xf14020f3, /* csrrs x1,mhartid,x0 */
 };
@@ -275,6 +272,7 @@ static void check_trap(Trap t, uint32_t cause, uint32_t tval)
 static void test_traps(void)
 {
     static const uint32_t zero[] = { 0x00000000u }, ones[] = { 0xFFFFFFFFu };
+    static const uint32_t bad_funct7[] = { 0x04208133u };   /* add with funct7 0x02 */
     StepInfo info;
     Trap t;
 
@@ -282,7 +280,7 @@ static void test_traps(void)
     check_trap(step_first(ones, 1), CAUSE_ILLEGAL_INSN, 0xFFFFFFFFu);
     check_trap(step_first(prog_ecall, 1), CAUSE_ILLEGAL_INSN, prog_ecall[0]);   /* until Milestone 7 */
     check_trap(step_first(prog_csr, 1), CAUSE_ILLEGAL_INSN, prog_csr[0]);
-    check_trap(step_first(prog_mul, 1), CAUSE_ILLEGAL_INSN, prog_mul[0]);       /* until Milestone 6 */
+    check_trap(step_first(bad_funct7, 1), CAUSE_ILLEGAL_INSN, bad_funct7[0]);   /* funct7 = 2 */
 
     t = step_first(prog_jal_misaligned, 1);
     check_trap(t, CAUSE_FETCH_MISALIGNED, BASE + 6);
