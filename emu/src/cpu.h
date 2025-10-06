@@ -5,10 +5,13 @@
 #include <stdint.h>
 
 #include "bus.h"
+#include "csr.h"
 
 typedef struct {
     uint32_t x[32];       /* x[0] always reads 0; writes to x0 are discarded */
     uint32_t pc;
+    Csr      csr;
+    bool     mtip, meip;  /* device interrupt lines, refreshed by the machine loop before each step */
 } Cpu;
 
 /* A synchronous exception raised while executing one instruction. */

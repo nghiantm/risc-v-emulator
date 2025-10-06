@@ -4,6 +4,7 @@
 #include "machine.h"
 #include "memory_map.h"
 #include "trace.h"
+#include "trap.h"
 
 bool machine_init(Machine *m)
 {
@@ -47,11 +48,18 @@ RunResult machine_run(Machine *m, uint64_t max_insts)
         StepInfo info;
         Trap t = cpu_step(&m->cpu, &m->bus, &info);
         if (t.raised) {
-            /* Trap delivery arrives with the CSRs in Milestone 7. */
-            snprintf(m->error_buf, sizeof m->error_buf, "unhandled trap cause=0x%x tval=0x%08x pc=0x%08x",
-                     (unsigned)t.cause, (unsigned)t.tval, (unsigned)m->cpu.pc);
-            m->error = m->error_buf;
-            return RUN_ERROR;
+            if (m->cpu.csr.mtvec == 0) {
+                snprintf(m->error_buf, sizeof m->error_buf,
+                         "trap with no handler installed (cause=0x%x tval=0x%08x pc=0x%08x)",
+                         (unsigned)t.cause, (unsigned)t.tval, (unsigned)m->cpu.pc);
+                m->error = m->error_buf;
+                return RUN_ERROR;
+            }
+            trap_enter(&m->cpu, t.cause, t.tval, m->cpu.pc);
+            if (m->trace)
+                trace_trap(stderr, t.cause, t.tval, m->cpu.pc);
+            bus_tick(&m->bus);
+            continue;
         }
         if (m->trace)
             trace_step(stderr, &info);

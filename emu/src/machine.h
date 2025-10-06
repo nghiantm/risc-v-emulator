@@ -26,7 +26,7 @@ typedef struct {
     ExitRequest exit_req;
     FaultSet faults;      /* parsed from --fault; devices that honour them arrive in later milestones */
     const char *error;    /* message for RUN_ERROR */
-    char error_buf[64];   /* backing store when the message has to be formatted */
+    char error_buf[128];   /* backing store when the message has to be formatted */
     bool trace;
 } Machine;
 

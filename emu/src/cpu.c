@@ -1,13 +1,17 @@
 #include "alu.h"
 #include "cpu.h"
 #include "decode.h"
+#include "trap.h"
 
 enum {
     OP_LOAD = 0x03, OP_MISC_MEM = 0x0F, OP_IMM = 0x13, OP_AUIPC = 0x17, OP_STORE = 0x23,
-    OP_REG = 0x33, OP_LUI = 0x37, OP_BRANCH = 0x63, OP_JALR = 0x67, OP_JAL = 0x6F
+    OP_REG = 0x33, OP_LUI = 0x37, OP_BRANCH = 0x63, OP_JALR = 0x67, OP_JAL = 0x6F,
+    OP_SYSTEM = 0x73
 };
 
 #define SIGN_BIT 0x80000000u
+
+enum { SYS_ECALL = 0x000, SYS_EBREAK = 0x001, SYS_MRET = 0x302 };
 
 static Trap trap(uint32_t cause, uint32_t tval)
 {
@@ -166,7 +170,34 @@ Trap cpu_step(Cpu *cpu, Bus *bus, StepInfo *info)
         if (funct3 > 1)
             return illegal(insn);
         break;
-    default:                                /* includes SYSTEM: ecall/ebreak/mret/CSR come later */
+    case OP_SYSTEM:
+        if (funct3 == 0) {
+            if (rd != 0 || insn_rs1(insn) != 0)
+                return illegal(insn);
+            switch ((uint32_t)insn >> 20) {
+            case SYS_ECALL:  return trap(CAUSE_ECALL_M, 0);
+            case SYS_EBREAK: return trap(CAUSE_BREAKPOINT, 0);
+            case SYS_MRET:   next = trap_return(&cpu->csr); break;
+            default:         return illegal(insn);
+            }
+        } else {
+            /* Zicsr. funct3 bit 2 selects the immediate form (uimm lives in the rs1 field). */
+            if (funct3 == 4)
+                return illegal(insn);
+            uint32_t addr = insn >> 20, old;
+            uint32_t src = (funct3 & 4u) ? insn_rs1(insn) : a;
+            if (!csr_read(&cpu->csr, addr, cpu->mtip, cpu->meip, &old))
+                return illegal(insn);
+            /* csrrs/csrrc with rs1 == x0 (or uimm == 0) must not write at all */
+            bool writes = (funct3 & 3u) == 1 || insn_rs1(insn) != 0;
+            uint32_t value = (funct3 & 3u) == 1 ? src : (funct3 & 3u) == 2 ? old | src : old & ~src;
+            if (writes && !csr_write(&cpu->csr, addr, value))
+                return illegal(insn);
+            result = old;
+            write = true;
+        }
+        break;
+    default:
         return illegal(insn);
     }
 
