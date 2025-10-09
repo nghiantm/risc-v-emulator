@@ -3,7 +3,7 @@ CFLAGS = -std=c11 -Wall -Wextra -Werror -O2 -I common -I emu/src
 
 BUILD := build
 
-.PHONY: all emu unit riscv-tests clean
+.PHONY: all emu unit riscv-tests isa clean
 
 all: emu
 
@@ -33,6 +33,10 @@ $(BUILD)/unit/%: emu/tests/%.c $(LIB_SRCS) $(UNIT_HDRS)
 
 riscv-tests:
 	scripts/build_riscv_tests.sh
+
+# Runs every built rv32ui/rv32um test under the emulator (needs `make riscv-tests` first).
+isa: emu
+	python3 scripts/run_isa_tests.py
 
 clean:
 	rm -rf $(BUILD)
