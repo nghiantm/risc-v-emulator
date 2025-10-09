@@ -141,12 +141,6 @@ static const uint32_t prog_store_unmapped[] = {
     0x00700093, /* addi x1,x0,7 */
     0x00152223, /* sw x1,4(x10) */
 };
-static const uint32_t prog_ecall[] = {
-    0x00000073, /* ecall */
-};
-static const uint32_t prog_csr[] = {
-    0xf14020f3, /* csrrs x1,mhartid,x0 */
-};
 static const uint32_t prog_pass[] = {
     0x00100537, /* lui x10,0x100 */
     0x000055b7, /* lui x11,0x5 */
@@ -278,8 +272,6 @@ static void test_traps(void)
 
     check_trap(step_first(zero, 1), CAUSE_ILLEGAL_INSN, 0);
     check_trap(step_first(ones, 1), CAUSE_ILLEGAL_INSN, 0xFFFFFFFFu);
-    check_trap(step_first(prog_ecall, 1), CAUSE_ILLEGAL_INSN, prog_ecall[0]);   /* until Milestone 7 */
-    check_trap(step_first(prog_csr, 1), CAUSE_ILLEGAL_INSN, prog_csr[0]);
     check_trap(step_first(bad_funct7, 1), CAUSE_ILLEGAL_INSN, bad_funct7[0]);   /* funct7 = 2 */
 
     t = step_first(prog_jal_misaligned, 1);
@@ -357,7 +349,7 @@ static void test_machine_timeout_and_error(void)
     static const uint32_t zero[] = { 0 };
     setup(zero, 1);
     CHECK(machine_run(&m, 100) == RUN_ERROR);
-    CHECK(strncmp(m.error, "unhandled trap cause=0x2", 24) == 0);
+    CHECK(strncmp(m.error, "trap with no handler installed (cause=0x2", 41) == 0);
 }
 
 int main(void)
