@@ -31,11 +31,20 @@ enum {
 #define MIP_MEIP      (1u << 11)
 #define MISA_VALUE    0x40001100u      /* MXL=1 (32-bit), extensions I and M */
 
+/* Interrupt cause values (include the top bit) */
+#define CAUSE_INT_FLAG       0x80000000u
+#define CAUSE_INT_MTIMER     (CAUSE_INT_FLAG | 7u)
+#define CAUSE_INT_MEXTERNAL  (CAUSE_INT_FLAG | 11u)
+
 /* false => no such CSR (the caller raises illegal-instruction). mtip/meip feed the composed mip. */
 bool csr_read(const Csr *c, uint32_t addr, bool mtip, bool meip, uint32_t *out);
 
 /* false => no such CSR. Writes to read-only CSRs (misa, mhartid, mip) are accepted and ignored;
  * unimplemented bits of implemented CSRs are dropped. */
 bool csr_write(Csr *c, uint32_t addr, uint32_t value);
+
+/* The interrupt to take now, or 0. Needs mstatus.MIE and the source's bit set in both mip and mie;
+ * external beats timer. */
+uint32_t csr_pending_interrupt(const Csr *c, bool mtip, bool meip);
 
 #endif /* CSR_H */

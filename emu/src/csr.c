@@ -36,3 +36,15 @@ bool csr_write(Csr *c, uint32_t addr, uint32_t value)
     default:           return false;
     }
 }
+
+uint32_t csr_pending_interrupt(const Csr *c, bool mtip, bool meip)
+{
+    if (!(c->mstatus & MSTATUS_MIE))
+        return 0;
+    uint32_t pending = ((mtip ? MIP_MTIP : 0) | (meip ? MIP_MEIP : 0)) & c->mie;
+    if (pending & MIP_MEIP)
+        return CAUSE_INT_MEXTERNAL;
+    if (pending & MIP_MTIP)
+        return CAUSE_INT_MTIMER;
+    return 0;
+}
