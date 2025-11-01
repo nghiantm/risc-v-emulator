@@ -10,7 +10,7 @@ LDFLAGS = -T link.ld -nostdlib -Wl,--no-warn-rwx-segments
 COMMON_SRCS := crt0.S $(wildcard src/*.c)
 COMMON_HDRS := $(wildcard include/*.h) ../common/memory_map.h link.ld
 
-EXAMPLES := hello
+EXAMPLES := hello timer_test
 ELFS := $(addprefix $(OUT)/,$(addsuffix .elf,$(EXAMPLES)))
 
 all: $(ELFS)
