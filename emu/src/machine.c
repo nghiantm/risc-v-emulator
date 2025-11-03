@@ -15,10 +15,12 @@ bool machine_init(Machine *m)
     clint_init(&m->clint);
     syscon_init(&m->syscon, &m->exit_req);
     uart_init(&m->uart, stdout);
+    sensor_init(&m->sensor, &m->faults);
     bus_add(&m->bus, &m->main_ram.dev);
     bus_add(&m->bus, &m->syscon.dev);
     bus_add(&m->bus, &m->clint.dev);
     bus_add(&m->bus, &m->uart.dev);
+    bus_add(&m->bus, &m->sensor.dev);
     return true;
 }
 
@@ -65,7 +67,7 @@ RunResult machine_run(Machine *m, uint64_t max_insts)
 
         /* Interrupts are taken between instructions; the interrupted instruction has not run. */
         m->cpu.mtip = clint_timer_pending(&m->clint);
-        m->cpu.meip = false;                          /* sensor line arrives in Milestone 12 */
+        m->cpu.meip = sensor_irq_pending(&m->sensor);
         uint32_t irq = csr_pending_interrupt(&m->cpu.csr, m->cpu.mtip, m->cpu.meip);
         if (irq) {
             if (!deliver(m, irq, 0))

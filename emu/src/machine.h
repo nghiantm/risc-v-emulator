@@ -10,6 +10,7 @@
 #include "exit_request.h"
 #include "fault.h"
 #include "ram.h"
+#include "sensor.h"
 #include "syscon.h"
 #include "uart.h"
 
@@ -17,7 +18,6 @@ typedef enum {            /* values equal the process exit codes */
     RUN_PASS = 0, RUN_FAIL = 1, RUN_TIMEOUT = 2, RUN_ERROR = 3
 } RunResult;
 
-/* Fields are added as the modules that own them appear (sensor). */
 typedef struct {
     Cpu cpu;
     Bus bus;
@@ -25,6 +25,7 @@ typedef struct {
     Clint clint;
     Syscon syscon;
     Uart uart;
+    Sensor sensor;
     ExitRequest exit_req;
     FaultSet faults;      /* parsed from --fault; devices that honour them arrive in later milestones */
     const char *error;    /* message for RUN_ERROR */
@@ -32,7 +33,7 @@ typedef struct {
     bool trace;
 } Machine;
 
-/* Zeroes *m and registers main RAM, SYSCON and UART on the bus. false on allocation failure. */
+/* Zeroes *m and registers every device on the bus. false on allocation failure. */
 bool machine_init(Machine *m);
 void machine_free(Machine *m);
 
