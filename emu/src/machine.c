@@ -12,11 +12,16 @@ bool machine_init(Machine *m)
     bus_init(&m->bus);
     if (!ram_init(&m->main_ram, "main_ram", MAIN_RAM_BASE, MAIN_RAM_SIZE))
         return false;
+    if (!dut_ram_init(&m->dut_ram, &m->faults)) {
+        ram_free(&m->main_ram);
+        return false;
+    }
     clint_init(&m->clint);
     syscon_init(&m->syscon, &m->exit_req);
     uart_init(&m->uart, stdout);
     sensor_init(&m->sensor, &m->faults);
     bus_add(&m->bus, &m->main_ram.dev);
+    bus_add(&m->bus, &m->dut_ram.dev);
     bus_add(&m->bus, &m->syscon.dev);
     bus_add(&m->bus, &m->clint.dev);
     bus_add(&m->bus, &m->uart.dev);
@@ -27,6 +32,7 @@ bool machine_init(Machine *m)
 void machine_free(Machine *m)
 {
     ram_free(&m->main_ram);
+    dut_ram_free(&m->dut_ram);
 }
 
 /* The tohost latch becomes an exit request: 1 means pass, anything else fails with value >> 1. */

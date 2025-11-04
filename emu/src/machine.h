@@ -7,6 +7,7 @@
 #include "bus.h"
 #include "clint.h"
 #include "cpu.h"
+#include "dut_ram.h"
 #include "exit_request.h"
 #include "fault.h"
 #include "ram.h"
@@ -22,12 +23,13 @@ typedef struct {
     Cpu cpu;
     Bus bus;
     Ram main_ram;
+    DutRam dut_ram;
     Clint clint;
     Syscon syscon;
     Uart uart;
     Sensor sensor;
     ExitRequest exit_req;
-    FaultSet faults;      /* parsed from --fault; devices that honour them arrive in later milestones */
+    FaultSet faults;      /* parsed from --fault; DUT RAM and the sensor read it on every access */
     const char *error;    /* message for RUN_ERROR */
     char error_buf[128];   /* backing store when the message has to be formatted */
     bool trace;
