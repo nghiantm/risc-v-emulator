@@ -1,6 +1,15 @@
 #include "memory_map.h"
 #include "sensor.h"
 
+#define BAD_ID_VALUE         0xBAD0BAD0u
+#define STUCK_VALUE_CC       2500
+#define OUT_OF_RANGE_VALUE_CC 20000
+
+static bool fault_on(const Sensor *s, FaultKind k)
+{
+    return s->faults && fault_set_has(s->faults, k);
+}
+
 static uint32_t prng_next(Sensor *s)       /* xorshift32 */
 {
     uint32_t x = s->prng;
@@ -20,7 +29,15 @@ static int32_t next_sample(Sensor *s, uint32_t n)
 
 static void complete_conversion(Sensor *s)
 {
-    s->data = next_sample(s, s->sample_count);
+    /* The PRNG advances even for faulted samples so a fault never shifts later healthy ones. */
+    int32_t sample = next_sample(s, s->sample_count);
+    if (fault_on(s, FAULT_SENSOR_NEVER_READY))
+        return;                                 /* conversion "finishes" but READY never rises */
+    if (fault_on(s, FAULT_SENSOR_STUCK))
+        sample = STUCK_VALUE_CC;
+    else if (fault_on(s, FAULT_SENSOR_OUT_OF_RANGE))
+        sample = OUT_OF_RANGE_VALUE_CC;
+    s->data = sample;
     s->sample_count++;
     s->ready = true;
 }
@@ -32,7 +49,7 @@ static bool sensor_read(Device *d, uint32_t offset, unsigned size, uint32_t *out
         return false;
     switch (offset) {
     case SENSOR_ID_REG:
-        *out = SENSOR_ID_VALUE;
+        *out = fault_on(s, FAULT_SENSOR_BAD_ID) ? BAD_ID_VALUE : SENSOR_ID_VALUE;
         return true;
     case SENSOR_CTRL_REG:
         *out = s->ctrl;
@@ -79,5 +96,5 @@ void sensor_init(Sensor *s, const FaultSet *faults)
 
 bool sensor_irq_pending(const Sensor *s)
 {
-    return s->ready && (s->ctrl & SENSOR_CTRL_IRQ_EN);
+    return s->ready && (s->ctrl & SENSOR_CTRL_IRQ_EN) && !fault_on(s, FAULT_SENSOR_NO_IRQ);
 }
