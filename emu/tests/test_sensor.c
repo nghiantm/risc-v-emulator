@@ -132,6 +132,47 @@ static void test_access_rules(void)
     machine_free(&m);
 }
 
+static void test_faults(void)
+{
+    Machine m;
+
+    setup(&m, "sensor_bad_id");
+    CHECK_EQ_U32(rd(&m.bus, SENSOR_ID_REG), 0xBAD0BAD0u);
+    machine_free(&m);
+
+    setup(&m, "sensor_stuck");
+    for (int i = 0; i < 5; i++)
+        CHECK_EQ_U32(convert(&m.bus), 2500);
+    machine_free(&m);
+
+    setup(&m, "sensor_out_of_range");
+    CHECK_EQ_U32(convert(&m.bus), 20000);
+    CHECK(20000 > SENSOR_TEMP_MAX_CC);
+    machine_free(&m);
+
+    setup(&m, "sensor_never_ready");
+    wr(&m.bus, SENSOR_CTRL_REG, SENSOR_CTRL_START | SENSOR_CTRL_IRQ_EN);
+    ticks(&m.bus, 3 * SENSOR_LATENCY_INSTS);
+    CHECK_EQ_U32(rd(&m.bus, SENSOR_STATUS_REG), 0);
+    CHECK_EQ_U32(rd(&m.bus, SENSOR_COUNT_REG), 0);
+    CHECK(!sensor_irq_pending(&m.sensor));
+    machine_free(&m);
+
+    setup(&m, "sensor_no_irq");
+    wr(&m.bus, SENSOR_CTRL_REG, SENSOR_CTRL_START | SENSOR_CTRL_IRQ_EN);
+    ticks(&m.bus, SENSOR_LATENCY_INSTS);
+    CHECK_EQ_U32(rd(&m.bus, SENSOR_STATUS_REG), SENSOR_STATUS_READY);   /* conversion still completes */
+    CHECK_EQ_U32(rd(&m.bus, SENSOR_COUNT_REG), 1);
+    CHECK(!sensor_irq_pending(&m.sensor));
+    machine_free(&m);
+
+    /* healthy sensor with a RAM fault set: sensor behaviour is unchanged */
+    setup(&m, "ram_data_stuck0:bit=3");
+    CHECK_EQ_U32(rd(&m.bus, SENSOR_ID_REG), SENSOR_ID_VALUE);
+    CHECK_EQ_U32(convert(&m.bus), 2485);
+    machine_free(&m);
+}
+
 /* Timer and sensor both pending with MIE on: the CPU must take the external interrupt first.
  * Assembled from the program: arm mtimecmp=0, start a conversion with IRQ_EN, poll READY,
  * enable MIE, spin; the handler stores mcause in x20 and exits via SYSCON. */
@@ -180,6 +221,7 @@ int main(void)
     test_sample_model();
     test_irq_line();
     test_access_rules();
+    test_faults();
     test_external_preempts_timer();
     TEST_MAIN_RETURN();
 }
