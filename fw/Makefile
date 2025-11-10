@@ -11,11 +11,15 @@ COMMON_SRCS := crt0.S $(wildcard src/*.c)
 COMMON_HDRS := $(wildcard include/*.h) ../common/memory_map.h link.ld
 
 EXAMPLES := hello timer_test
-ELFS := $(addprefix $(OUT)/,$(addsuffix .elf,$(EXAMPLES)))
+ELFS := $(addprefix $(OUT)/,$(addsuffix .elf,$(EXAMPLES))) $(OUT)/diag.elf
 
 all: $(ELFS)
 
 $(OUT)/%.elf: examples/%.c $(COMMON_SRCS) $(COMMON_HDRS)
+	@mkdir -p $(OUT)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(COMMON_SRCS) $< -o $@
+
+$(OUT)/diag.elf: diag/main.c $(COMMON_SRCS) $(COMMON_HDRS)
 	@mkdir -p $(OUT)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(COMMON_SRCS) $< -o $@
 
