@@ -3,7 +3,7 @@ CFLAGS = -std=c11 -Wall -Wextra -Werror -O2 -I common -I emu/src
 
 BUILD := build
 
-.PHONY: all emu unit riscv-tests isa fw clean
+.PHONY: all emu unit riscv-tests isa fw campaign clean
 
 all: emu
 
@@ -41,6 +41,10 @@ isa: emu
 # Firmware (needs a riscv64-unknown-elf- toolchain; override with RISCV_PREFIX).
 fw:
 	$(MAKE) -C fw
+
+# Fault-injection campaign (needs `make emu fw` first).
+campaign: emu fw
+	python3 scripts/fault_campaign.py
 
 clean:
 	rm -rf $(BUILD)
