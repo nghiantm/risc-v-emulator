@@ -3,7 +3,7 @@ CFLAGS = -std=c11 -Wall -Wextra -Werror -O2 -I common -I emu/src
 
 BUILD := build
 
-.PHONY: all emu unit riscv-tests isa fw campaign clean
+.PHONY: all emu unit riscv-tests isa fw campaign test clean
 
 all: emu
 
@@ -45,6 +45,9 @@ fw:
 # Fault-injection campaign (needs `make emu fw` first).
 campaign: emu fw
 	python3 scripts/fault_campaign.py
+
+# unit + isa + campaign; make stops at the first failing stage.
+test: unit isa campaign
 
 clean:
 	rm -rf $(BUILD)
