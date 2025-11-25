@@ -32,7 +32,7 @@ $(BUILD)/unit/%: emu/tests/%.c $(LIB_SRCS) $(UNIT_HDRS)
 	$(CC) $(CFLAGS) $< $(LIB_SRCS) -o $@
 
 riscv-tests:
-	scripts/build_riscv_tests.sh
+	bash scripts/build_riscv_tests.sh
 
 # Runs every built rv32ui/rv32um test under the emulator (needs `make riscv-tests` first).
 isa: emu
